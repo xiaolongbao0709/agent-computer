@@ -12,7 +12,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { withWorkspace, getWorkspace, type DurableObjectStorageLike, type WorkspaceHandle } from "@cloudflare/computer";
 import { WorkerShellBackend, WorkspaceFsAdapter, type WorkerShellLoader } from "@cloudflare/computer/backends/worker-shell";
-import { Bash, NetworkAccessDeniedError, type SecureFetch } from "just-bash";
+import { Bash, NetworkAccessDeniedError, defineCommand, type SecureFetch } from "just-bash";
 
 // isolate shell 的动态 Worker 通过这个服务代理回连本 Worker 的 Workspace，必须从入口导出
 export { WorkspaceServiceProxy } from "@cloudflare/computer";
@@ -160,6 +160,16 @@ const readOnlyFetch: SecureFetch = async (url, options = {}) => {
 
 type ExecOutcome = { stdout: string; stderr: string; exitCode: number; engine: "isolate" | "embedded" };
 
+// uname 壳：这里没有 Linux 内核，如实报告自己是台云端小电脑——
+// 免得探测脚本拿到 127 误判 shell 坏了
+const unameCommand = defineCommand("uname", async (args) => {
+  const all = args.includes("-a");
+  const stdout = all
+    ? "FloatOS float-computer 1.0-embedded just-bash cloudflare-workers wasm32\n"
+    : "FloatOS\n";
+  return { stdout, stderr: "", exitCode: 0 };
+});
+
 async function runShell(ws: Awaited<ReturnType<typeof getWorkspace>>, command: string): Promise<ExecOutcome> {
   try {
     using run = await ws.runtime.exec(command, { encoding: "utf8" });
@@ -181,6 +191,7 @@ async function runShell(ws: Awaited<ReturnType<typeof getWorkspace>>, command: s
       fetch: readOnlyFetch,
       defenseInDepth: { enabled: false },
       executionLimits: { maxOutputSize: EMBEDDED_MAX_OUTPUT },
+      customCommands: [unameCommand],
     });
     const result = await bash.exec(command);
     return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode, engine: "embedded" };
