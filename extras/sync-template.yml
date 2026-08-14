@@ -1,6 +1,10 @@
 # 一键同步上游模板：把 xiaolongbao0709/agent-computer 的最新文件搬进本仓库并提交，
 # Cloudflare 检测到提交后会自动重新构建部署——全程不用手动改文件。
 #
+# 启用（一次性）：把本文件复制到你仓库的 .github/workflows/sync-template.yml。
+# （模板不能直接把它放在 .github/workflows/ 里——部署向导复制仓库时没有写入
+#   workflow 文件的权限，会导致部署失败，所以放在 extras/ 里由你手动挪一步。）
+#
 # 用法：仓库页 → Actions → 「同步上游模板」→ Run workflow（也会每周一自动跑一次）。
 # 不想要自动跑就删掉下面的 schedule 段，只留手动按钮。
 #
