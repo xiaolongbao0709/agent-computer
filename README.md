@@ -74,7 +74,7 @@
 
 **全新部署（推荐，零配置）**：直接用容器版部署链接——
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaolongbao0709/agent-computer/tree/container)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaolongbao0709/agent-computer-container)
 
 （小手机 设置 → 角色电脑 里也有「容器版部署」按钮。）容器版分支的配置已经开好，
 流程和普通部署完全一样，不用改任何文件。
