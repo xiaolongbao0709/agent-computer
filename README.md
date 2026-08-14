@@ -68,15 +68,22 @@
 ## 升级容器模式（真 Linux，可选）
 
 想让电脑变成**真正的 Linux**（能 `apt` / `npm install` / `pip install`、跑任意程序、
-全功能联网），可以开启容器模式：
+全功能联网），可以开启容器模式。**前提**：Cloudflare 账号开通 Workers 付费计划
+（$5/月起）。容器按实际运行秒数另计费，不用时自动休眠不花钱；付费计划自带每月
+一定量的免费容器额度，聊天式的零星使用大概率不超。
 
-1. **前提**：Cloudflare 账号开通 Workers 付费计划（$5/月起）。容器按实际运行秒数
-   另计费，不用时自动休眠不花钱；付费计划自带每月一定量的免费容器额度，
-   聊天式的零星使用大概率不超；
-2. 编辑 `wrangler.jsonc`：取消 `"containers"` 整段的注释；
-3. 重新部署：把改动推回你的仓库（部署时向导建的那个副本仓库），Cloudflare 会自动
-   重新构建部署；或本地 `npx wrangler deploy`；
-4. 回小手机做一次「连接测试」，显示 **容器模式（真 Linux）** 即成功。
+**全新部署（推荐，零配置）**：直接用容器版部署链接——
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaolongbao0709/agent-computer/tree/container)
+
+（小手机 设置 → 角色电脑 里也有「容器版部署」按钮。）容器版分支的配置已经开好，
+流程和普通部署完全一样，不用改任何文件。
+
+**已有部署原地升级（保留硬盘数据）**：
+
+1. 打开你部署用的仓库，编辑 `wrangler.jsonc`：取消 `"containers"` 整段的注释；
+2. 提交后 Cloudflare 自动重新构建（第一次要构建容器镜像，比平时慢几分钟）；
+3. 回小手机做一次「连接测试」，显示 **容器模式（真 Linux）** 即成功。
 
 容器模式下：每台电脑（每个角色 / 小坊）一个独立容器实例；硬盘仍在 DO 里持久保存，
 容器经 FUSE 把这块硬盘挂载在 `/workspace`——命令读写的就是角色电脑的持久硬盘，
