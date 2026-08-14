@@ -1,0 +1,27 @@
+{
+  "name": "ai-phone-agent-computer",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/computer": "latest",
+    "just-bash": "^3.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "typescript": "^5.8.3",
+    "wrangler": "latest"
+  },
+  "cloudflare": {
+    "bindings": {
+      "AGENT_TOKEN": {
+        "description": "角色电脑连接密钥。请填写一段只由你自己保存的长随机字符串；小手机会用同一串密钥连接你的角色电脑。"
+      }
+    }
+  }
+}

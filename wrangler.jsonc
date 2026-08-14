@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ai-phone-agent-computer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-12",
+  "compatibility_flags": ["nodejs_compat"],
+  // ── 可选：isolate shell（让电脑能执行 ls/cat/grep 等命令）──
+  // 需要账号具备 worker_loaders（beta）能力。想开启的话：
+  //  1. 把上面一行改成 "compatibility_flags": ["nodejs_compat", "experimental"],
+  //  2. 取消下一行的注释；
+  // 然后重新部署。没有该能力的账号保持现状即可（基础模式：硬盘完全可用）。
+  // "worker_loaders": [{ "binding": "LOADER" }],
+  "durable_objects": {
+    "bindings": [{ "class_name": "Computer", "name": "Computer" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Computer"] }
+  ]
+}
