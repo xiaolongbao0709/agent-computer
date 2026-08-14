@@ -15,7 +15,7 @@
 
 1. 点小手机 设置 → 角色电脑 里的「一键部署」（或用下方按钮），登录你的 Cloudflare 账号；
 
-   [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaolongbao0709/agent-computer-)
+   [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaolongbao0709/agent-computer)
 
 2. 部署时会要求填 `AGENT_TOKEN`：自己编一段长随机字符串（这就是连接密钥，别泄露）；
 3. 部署完成后复制 Worker 地址（形如 `https://ai-phone-agent-computer.你的子域.workers.dev`）；
