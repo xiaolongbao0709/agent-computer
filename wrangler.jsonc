@@ -17,14 +17,16 @@
   // 每台电脑（每个角色 / 小坊）一个容器实例，互相隔离；硬盘仍在 DO 里持久保存，
   // 容器只是"借来跑命令的机器"，文件自动双向同步。
   // 部署报 instance_type 不识别时，改成 "standard-2" 再试。
-  // "containers": [
-  //   {
-  //     "class_name": "Computer",
-  //     "image": "./Dockerfile",
-  //     "instance_type": "basic",
-  //     "max_instances": 5
-  //   }
-  // ],
+  // 容器版分支：容器模式已开启（真 Linux；需 Workers 付费计划 $5/月起）。
+  // 部署报 instance_type 不识别时，改成 "standard-2" 再试。
+  "containers": [
+    {
+      "class_name": "Computer",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 5
+    }
+  ],
   "durable_objects": {
     "bindings": [{ "class_name": "Computer", "name": "Computer" }]
   },
