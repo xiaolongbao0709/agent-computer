@@ -4,12 +4,27 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-12",
   "compatibility_flags": ["nodejs_compat"],
-  // ── 可选：isolate shell（让电脑能执行 ls/cat/grep 等命令）──
-  // 需要账号具备 worker_loaders（beta）能力。想开启的话：
+  // ── 可选 ①：isolate shell（免费计划的隔离升级，需要 worker_loaders beta 能力）──
+  // 想开启的话：
   //  1. 把上面一行改成 "compatibility_flags": ["nodejs_compat", "experimental"],
   //  2. 取消下一行的注释；
-  // 然后重新部署。没有该能力的账号保持现状即可（基础模式：硬盘完全可用）。
+  // 然后重新部署。没有该能力的账号保持现状即可（内嵌 shell 照常可用）。
   // "worker_loaders": [{ "binding": "LOADER" }],
+
+  // ── 可选 ②：容器模式 = 真 Linux（apt/npm/pip、全功能网络）──
+  // 需要 Workers 付费计划（$5/月起，容器按实际运行秒数另计，不用时自动休眠）。
+  // 开启：取消下面 "containers" 整段注释，重新部署（wrangler 会自动构建并推送 Dockerfile 镜像）。
+  // 每台电脑（每个角色 / 小坊）一个容器实例，互相隔离；硬盘仍在 DO 里持久保存，
+  // 容器只是"借来跑命令的机器"，文件自动双向同步。
+  // 部署报 instance_type 不识别时，改成 "standard-2" 再试。
+  // "containers": [
+  //   {
+  //     "class_name": "Computer",
+  //     "image": "./Dockerfile",
+  //     "instance_type": "basic",
+  //     "max_instances": 5
+  //   }
+  // ],
   "durable_objects": {
     "bindings": [{ "class_name": "Computer", "name": "Computer" }]
   },

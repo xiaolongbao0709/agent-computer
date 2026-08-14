@@ -1,8 +1,9 @@
 // AI Phone「角色电脑」——基于 @cloudflare/computer 的自部署 Worker。
 //
 // 一台部署 = 一批相互隔离的"电脑"（Workspace）：每个角色一台、小坊（工坊）一台。
-// 每台电脑是一个 Durable Object，硬盘是 DO 里的 SQLite 虚拟文件系统（持久、免费计划可用）；
-// shell 命令由 isolate 后端执行（just-bash，经 worker_loaders 动态加载；不可用时自动降级为纯文件系统）。
+// 每台电脑是一个 Durable Object，硬盘是 DO 里的 SQLite 虚拟文件系统（持久、免费计划可用）。
+// shell 命令按可用性逐级选择：
+//   容器（真 Linux，付费计划可选开启）→ isolate（worker_loaders beta）→ 内嵌 just-bash（保底，免费可用）。
 //
 // 安全模型：
 //  - 所有请求必须带 Authorization: Bearer <AGENT_TOKEN>，密钥只在部署者自己手里；
@@ -12,10 +13,12 @@
 import { DurableObject } from "cloudflare:workers";
 import { withWorkspace, getWorkspace, type DurableObjectStorageLike, type WorkspaceHandle } from "@cloudflare/computer";
 import { WorkerShellBackend, WorkspaceFsAdapter, type WorkerShellLoader } from "@cloudflare/computer/backends/worker-shell";
+import { CloudflareContainerBackend, withWorkspaceContainer } from "@cloudflare/computer/backends/container";
 import { Bash, NetworkAccessDeniedError, defineCommand, type SecureFetch } from "just-bash";
 
-// isolate shell 的动态 Worker 通过这个服务代理回连本 Worker 的 Workspace，必须从入口导出
-export { WorkspaceServiceProxy } from "@cloudflare/computer";
+// isolate shell 的动态 Worker 通过这个服务代理回连本 Worker 的 Workspace，必须从入口导出；
+// WorkspaceProxy 则是容器出网的回环绑定（ctx.exports 按入口导出解析），容器模式必需
+export { WorkspaceServiceProxy, WorkspaceProxy } from "@cloudflare/computer";
 
 type Env = {
   Computer: DurableObjectNamespace;
@@ -31,22 +34,45 @@ class ComputerBase extends DurableObject<Env> {
   get doEnv() { return this.env; }
 }
 
+// 容器宿主层：wrangler.jsonc 里打开 containers 配置后，容器会挂在这个 DO 上
+//（ctx.container 出现），此时构造容器后端——computerd 跑在容器里，文件系统
+// 与 DO 硬盘经包内置的 capnweb 会话双向同步，命令看到的就是同一块盘。
+// 没挂容器（免费部署）时这里什么都不做，零开销。
+class ComputerContainerHost extends withWorkspaceContainer(ComputerBase) {
+  readonly containerBackend = (this.doCtx as { container?: unknown }).container
+    ? new CloudflareContainerBackend({
+        container: () => this,
+        workspace: { binding: "Computer", id: this.doCtx.id.toString() },
+        // 容器内命令直连外网（真 Linux 模式的网络是全功能的，README 有说明）
+        egress: { mode: "direct" },
+      })
+    : null;
+}
+
 export class Computer extends withWorkspace(
-  ComputerBase,
+  ComputerContainerHost,
   (self) => ({
     // workers-types 与包内自带类型对 SQL Row 的泛型声明有出入，运行时同物
     storage: self.doCtx.storage as unknown as DurableObjectStorageLike,
-    backends: self.doEnv.LOADER
-      ? [
-          new WorkerShellBackend({
-            loader: self.doEnv.LOADER,
-            workspace: { binding: "Computer", id: self.doCtx.id.toString() },
-            ctx: self.doCtx,
-          }),
-        ]
-      : [],
+    backends: self.containerBackend
+      ? [self.containerBackend]
+      : self.doEnv.LOADER
+        ? [
+            new WorkerShellBackend({
+              loader: self.doEnv.LOADER,
+              workspace: { binding: "Computer", id: self.doCtx.id.toString() },
+              ctx: self.doCtx,
+            }),
+          ]
+        : [],
   }),
-) {}
+) {
+  // computerd 从容器内向 DO 发起 /ws 升级建 capnweb 会话，交给容器后端处理
+  override async fetch(request: Request): Promise<Response> {
+    if (this.containerBackend) return this.containerBackend.handleFetch(request);
+    return new Response("container backend not configured", { status: 501 });
+  }
+}
 
 // ── HTTP 层 ──
 
@@ -222,16 +248,24 @@ export default {
       using ws = await getWorkspace(stub as unknown as WorkspaceHandle);
       switch (body.action) {
         case "status": {
-          // 文件系统探活 + shell 探活（shell 不可用不算错，报告能力即可）
+          // 文件系统探活 + shell 探活（shell 不可用不算错，报告能力即可）。
+          // 用 uname 分辨壳的成色：容器里的真 Linux 回 "Linux"，内嵌壳如实回 "FloatOS"。
           await ws.fs.mkdir("/", { recursive: true }).catch(() => {});
           let shell = false;
           let engine: string | undefined;
+          let linux = false;
           try {
             const probe = await runShell(ws, "echo ok");
             shell = probe.exitCode === 0;
             engine = probe.engine;
+            if (shell) {
+              // uname 单独探（isolate 的 just-bash 没有 uname，会 127，不算 shell 坏）
+              const u = await runShell(ws, "uname").catch(() => null);
+              linux = u ? /\bLinux\b/.test(u.stdout) : false;
+            }
           } catch { /* 无 shell */ }
-          return json({ ok: true, fs: true, shell, mode: shell ? "shell" : "fs-only", engine });
+          const mode = !shell ? "fs-only" : linux ? "container" : "shell";
+          return json({ ok: true, fs: true, shell, mode, engine: linux ? "container" : engine });
         }
 
         case "list": {
