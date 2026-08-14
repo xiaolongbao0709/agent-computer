@@ -1,0 +1,49 @@
+# 一键同步上游模板：把 xiaolongbao0709/agent-computer 的最新文件搬进本仓库并提交，
+# Cloudflare 检测到提交后会自动重新构建部署——全程不用手动改文件。
+#
+# 用法：仓库页 → Actions → 「同步上游模板」→ Run workflow（也会每周一自动跑一次）。
+# 不想要自动跑就删掉下面的 schedule 段，只留手动按钮。
+#
+# 特意不覆盖的文件：
+#  - wrangler.jsonc —— 这是你的配置（容器模式/isolate 的开关都在里面），
+#    模板的 wrangler.jsonc 若有重要变化，会在模板的更新说明里提醒手动对齐；
+#  - .github/ —— 本工作流自己（GitHub 也不允许它改写自己）。
+
+name: 同步上游模板
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 拉取上游并覆盖本地（保留 wrangler.jsonc 与 .github）
+        run: |
+          git clone --depth 1 https://github.com/xiaolongbao0709/agent-computer /tmp/upstream
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'wrangler.jsonc' \
+            --exclude '.dev.vars' \
+            /tmp/upstream/ ./
+          rm -rf /tmp/upstream
+
+      - name: 提交变更（如有）
+        run: |
+          git config user.name "template-sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "已是最新，无需提交"
+          else
+            git commit -m "chore: 同步上游模板"
+            git push
+          fi
